@@ -1,0 +1,57 @@
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from core.analisis import AnalisisSymbol
+from config import BOT_TOKEN, SYMBOLS
+from logs.logger import setup_logging
+
+logger = setup_logging()
+
+
+class TelegramBot:
+    def __init__(self):
+        self.analisis_symbol = AnalisisSymbol()
+        self.app = ApplicationBuilder().token(BOT_TOKEN).build()
+        self.setup_handler()
+
+    def setup_handler(self):
+        self.app.add_handler(CommandHandler("start", self.start_command))
+        self.app.add_handler(CommandHandler("analisa", self.analisa_command))
+
+    async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        start_message = (
+            "✨Halo, aku adalah *XenBot* 🤖, asistenmu untuk analisis forex berbasis *rule-based* yang bakal bantu kamu mencari setup entry terbaik: \n\n"
+            "🛠 *Fitur yang tersedia:*\n"
+            "✅ `/analisa` - Cek sinyal terbaru\n"
+            "✅ `/settings` - Atur preferensi\n"
+            "✅ `/help` - Panduan penggunaan\n\n"
+            "🔥 *Jangan trading pakai feeling, pakai XenBot aja!*"
+        )
+        await update.message.reply_text(start_message, parse_mode="Markdown")
+
+    async def analisa_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            args = context.args()
+            if len(args) != 1:
+                await update.message.reply_text(
+                    "Gunakan: /analisa [PAIR]\nContoh: /analisa EURUSD"
+                )
+                return None
+
+            symbol = args[0].upper()
+            if symbol not in SYMBOLS:
+                await update.message.reply_text(
+                    f"Yaah maaf, saya belum dilatih untuk menganalisa {symbol}"
+                )
+                return None
+
+            processing_msg = await update.message.reply_text("⏳ Menganalisa...")
+            result = self.analisis_symbol.get_analisis()
+
+            analisis_msg = f"🔄 **Hasil Analisa XenBot** 🔄\n{result['signal']}"
+            processing_msg.edit_text(analisis_msg, parse_mode="Markdown")
+        except Exception as e:
+            logger.error(f"Gagal menganalisa simbol: {e}")
+            processing_msg.edit_text(f"❌ Analisa gagal: {e}")
+
+    def run(self):
+        self.app.run_polling()
