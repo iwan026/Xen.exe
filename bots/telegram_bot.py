@@ -50,7 +50,7 @@ class TelegramBot:
                 result = self.analisis_symbol.get_analisis(symbol, timeframe)
 
                 analisis_msg = f"🔄 **Hasil Analisa XenBot** 🔄\n{result['analisis']}"
-                with open[result["chart_path"], "rb"] as chart_file:
+                with open(result["chart_path"], "rb") as chart_file:
                     await update.message.reply_photo(
                         photo=chart_file, caption=analisis_msg, parse_mode="Markdown"
                     )
