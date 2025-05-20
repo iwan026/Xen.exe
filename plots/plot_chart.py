@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from datetime import datetime, timedelta
 from mplfinance.original_flavor import candlestick_ohlc
 from config import PLOTS_DIR
 from logs.logger import setup_logging
