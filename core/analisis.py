@@ -14,9 +14,7 @@ class AnalisisSymbol:
     def add_rsi(self, df: pd.DataFrame):
         df["rsi_14"] = talib.RSI(df["close"], timeperiod=14)
 
-    def get_analisis(
-        self, symbol: str, timeframe: str
-    ) -> pd.DataFrame:
+    def get_analisis(self, symbol: str, timeframe: str) -> pd.DataFrame:
         df = get_realtime_data(symbol, timeframe)
         self.add_exponential_moving_average(df)
         self.add_rsi(df)

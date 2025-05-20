@@ -31,7 +31,7 @@ class TelegramBot:
     async def analisa_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             args = context.args
-            if len(args) != 1:
+            if len(args) != 2:
                 await update.message.reply_text(
                     "Gunakan: /analisa [PAIR]\nContoh: /analisa EURUSD"
                 )
