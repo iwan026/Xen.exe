@@ -20,6 +20,7 @@ def get_realtime_data(
 
         df = pd.DataFrame(rates)
         df["time"] = pd.to_datetime(df["time"], unit="s")
+        df.set_index("time", inplace=True)
         df = df.rename(columns={"tick_volume": "volume"})
 
         return df

@@ -1,7 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from datetime import datetime, timedelta
 from mplfinance.original_flavor import candlestick_ohlc
 from config import PLOTS_DIR
 from logs.logger import setup_logging
@@ -62,7 +61,7 @@ class ChartVisualizer:
         plt.tight_layout()
 
         # Save the chart
-        plot_path = PLOTS_DIR / f"{self.symbol}_prediction.png"
+        plot_path = PLOTS_DIR / f"{symbol}_prediction.png"
         plt.savefig(plot_path, dpi=150, bbox_inches="tight")
         plt.close()
         return plot_path
