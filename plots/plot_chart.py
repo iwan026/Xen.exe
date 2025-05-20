@@ -98,7 +98,7 @@ class ChartVisualizer:
 
         # Interval label waktu yang disesuaikan dengan timeframe
         if timeframe.lower() in ["M1", "M5"]:
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=4))
+            ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=15))
         elif timeframe.lower() in ["M15", "M30"]:
             ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
         elif timeframe.lower() == "H1":
