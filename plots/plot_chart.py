@@ -28,62 +28,70 @@ class ChartVisualizer:
         candle_count = candle_counts.get(timeframe.upper(), 100)
         display_df = df.tail(candle_count).copy()
 
-        # Pastikan tidak ada data yang hilang
-        display_df = display_df.fillna(method="ffill")
-
-        # Perbaikan utama: format date_num dengan metode yang lebih konsisten
-        # dan pastikan data frame index adalah datetime
+        # Pastikan index adalah datetime dan diurutkan
         if not isinstance(display_df.index, pd.DatetimeIndex):
-            try:
-                display_df.index = pd.to_datetime(display_df.index)
-            except Exception as e:
-                logger.error(f"Error converting index to datetime: {e}")
-                # Fallback jika konversi gagal
-                display_df["date_num"] = range(len(display_df))
-        else:
-            # Konversi datetime ke format numerik yang dapat digunakan oleh candlestick_ohlc
-            display_df["date_num"] = mdates.date2num(display_df.index.to_pydatetime())
+            display_df.index = pd.to_datetime(display_df.index)
+        display_df = display_df.sort_index()
 
-        ohlc = display_df[["date_num", "open", "high", "low", "close"]].values
+        # Fill NA values
+        display_df = display_df.ffill().bfill()
+
+        # Siapkan data OHLC tanpa konversi date_num
+        ohlc = display_df[["open", "high", "low", "close"]].values
+        dates = display_df.index
 
         # Lebar candle berdasarkan timeframe
-        candle_width = {
-            "M1": 0.6 / 24 / 60,
-            "M5": 0.6 / 24 / 12,
-            "M15": 0.6 / 24 / 4,
-            "M30": 0.6 / 24 / 2,
-            "H1": 0.6 / 24,
-            "H4": 0.6 / 6,
+        candle_width_map = {
+            "M1": 0.0004,  # ~0.6/24/60
+            "M5": 0.002,  # ~0.6/24/12
+            "M15": 0.006,  # ~0.6/24/4
+            "M30": 0.012,  # ~0.6/24/2
+            "H1": 0.025,  # ~0.6/24
+            "H4": 0.1,  # ~0.6/6
             "D1": 0.6,
         }
+        width = candle_width_map.get(timeframe.upper(), 0.025)
 
-        width = candle_width.get(timeframe.upper(), 0.6 / 24)
-
-        # Menggambar candle
-        candlestick_ohlc(
-            ax, ohlc, width=width, colorup="#26a69a", colordown="#ef5350", alpha=1.0
-        )
+        # Buat candlestick manual tanpa date_num
+        for i, date in enumerate(dates):
+            if not np.isnan(ohlc[i]).any():  # Pastikan tidak ada NaN
+                color = (
+                    "#26a69a" if ohlc[i, 3] >= ohlc[i, 0] else "#ef5350"
+                )  # close >= open
+                rect = plt.Rectangle(
+                    (mdates.date2num(date) - width / 2, ohlc[i, 0]),
+                    width,
+                    ohlc[i, 3] - ohlc[i, 0],
+                    facecolor=color,
+                    edgecolor=color,
+                )
+                ax.add_patch(rect)
+                # Garis vertikal (high-low)
+                ax.plot(
+                    [mdates.date2num(date), mdates.date2num(date)],
+                    [ohlc[i, 1], ohlc[i, 2]],
+                    color=color,
+                    linewidth=1,
+                )
 
         # Gambar moving average jika tersedia
         if "ema_21" in display_df.columns and "ema_50" in display_df.columns:
             ax.plot(
-                display_df.index,
+                dates,
                 display_df["ema_21"],
                 color="#2962FF",
                 linewidth=1.2,
                 alpha=0.7,
-                label=f"EMA(21)",
+                label="EMA(21)",
             )
             ax.plot(
-                display_df.index,
+                dates,
                 display_df["ema_50"],
                 color="#FF6D00",
                 linewidth=1.2,
                 alpha=0.7,
-                label=f"EMA(50)",
+                label="EMA(50)",
             )
-
-            # Tambahkan legend
             ax.legend(loc="upper left", facecolor="#131722", edgecolor="#2a2e39")
 
         # Style tradingview
@@ -97,47 +105,28 @@ class ChartVisualizer:
         ax.set_facecolor("#131722")
         ax.grid(color="#2a2e39", linestyle="-", linewidth=0.5, alpha=0.5)
 
-        # Perbaikan formatter tanggal berdasarkan timeframe
-        if timeframe.upper() in ["M1", "M5", "M15", "M30"]:
-            date_format = mdates.DateFormatter("%H:%M\n%d-%m")
-            ax.xaxis.set_major_formatter(date_format)
-            # Untuk timeframe pendek, tampilkan tick lebih sering
-            ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=5, maxticks=10))
-        elif timeframe.upper() in ["H1", "H4"]:
-            date_format = mdates.DateFormatter("%d-%m\n%H:%M")
-            ax.xaxis.set_major_formatter(date_format)
-            ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=5, maxticks=8))
-        else:  # D1 dan lainnya
-            date_format = mdates.DateFormatter("%d-%m-%Y")
-            ax.xaxis.set_major_formatter(date_format)
-            ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=7))
-
-        # Mengurangi rotasi label agar lebih rapi
+        # Format tanggal
+        locator = mdates.AutoDateLocator()
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
         plt.xticks(rotation=30)
 
-        # Mengatur padding untuk memastikan semua elemen terlihat
-        plt.subplots_adjust(left=0.08, right=0.92, top=0.92, bottom=0.15)
+        # Atur batas sumbu
+        if len(dates) > 0:
+            valid_ohlc = ohlc[~np.isnan(ohlc).any(axis=1)]
+            if len(valid_ohlc) > 0:
+                low = np.min(valid_ohlc[:, 2])  # low
+                high = np.max(valid_ohlc[:, 1])  # high
+                padding = (high - low) * 0.08
+                ax.set_ylim(low - padding, high + padding)
+                ax.set_xlim(dates[0], dates[-1])
 
-        # Menghitung percentile untuk mengatasi outlier
-        low_values = np.percentile(display_df["low"].values, 2)  # Mengambil 2% terbawah
-        high_values = np.percentile(
-            display_df["high"].values, 98
-        )  # Mengambil 98% teratas
+        # Hapus spines dan tambahkan watermark
+        for spine in ["top", "right"]:
+            ax.spines[spine].set_visible(False)
+        for spine in ["left", "bottom"]:
+            ax.spines[spine].set_color("#2a2e39")
 
-        # Menghitung range yang realistis
-        y_range = high_values - low_values
-        y_padding = y_range * 0.08  # 8% padding untuk tampilan yang lebih tepat
-
-        # Set batas y-axis
-        ax.set_ylim(low_values - y_padding, high_values + y_padding)
-
-        # Hapus spines yang tidak perlu
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.spines["left"].set_color("#2a2e39")
-        ax.spines["bottom"].set_color("#2a2e39")
-
-        # Tambahkan watermark dengan opacity rendah
         ax.text(
             0.99,
             0.01,
@@ -149,20 +138,6 @@ class ChartVisualizer:
             va="bottom",
             transform=ax.transAxes,
         )
-
-        # Set limit x-axis untuk memastikan semua candle terlihat
-        if len(display_df) > 0:
-            # Pastikan ada data dalam display_df
-            try:
-                # Mendapatkan tanggal pertama dan terakhir
-                start_date = display_df.index.min()
-                end_date = display_df.index.max()
-
-                # Tambahkan sedikit padding untuk tanggal
-                delta = (end_date - start_date) * 0.02  # 2% padding
-                ax.set_xlim(start_date - delta, end_date + delta)
-            except Exception as e:
-                logger.error(f"Error setting x limits: {e}")
 
         # Save the chart
         plot_path = PLOTS_DIR / f"{symbol}_{timeframe}_chart.png"
