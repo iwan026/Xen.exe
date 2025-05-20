@@ -16,40 +16,47 @@ class ChartVisualizer:
         plt.style.use("dark_background")
         fig, ax = plt.subplots(figsize=(14, 7), facecolor="#131722")
 
+        # Menentukan jumlah candle yang ditampilkan berdasarkan timeframe
         candle_counts = {
-            "M1": 150,
-            "M5": 150,
-            "M15": 150,
-            "M30": 150,
-            "H1": 120,
-            "H4": 100,
-            "D1": 90,
+            "M1": 100,  # Mengurangi jumlah candle untuk menghindari area kosong
+            "M5": 100,
+            "M15": 100,
+            "M30": 100,
+            "H1": 80,
+            "H4": 60,
+            "D1": 60,
         }
 
-        candle_count = candle_counts.get(timeframe.upper(), 150)
+        candle_count = candle_counts.get(timeframe.upper(), 100)
 
+        # Mengambil data candle terbaru sesuai jumlah candle yang akan ditampilkan
         display_df = df.tail(candle_count).copy()
+
+        # Memastikan tidak ada data yang hilang (gap) yang menyebabkan area kosong
+        display_df = display_df.fillna(method="ffill")
+
         display_df["date_num"] = mdates.date2num(display_df.index.to_pydatetime())
         ohlc = display_df[["date_num", "open", "high", "low", "close"]].values
 
-        # Gambar Candle dengan width yang sesuai berdasarkan timeframe
+        # Lebar candle yang sesuai berdasarkan timeframe
         candle_width = {
-            "M1": 0.6 / 24 / 60,
-            "M5": 0.6 / 24 / 12,
-            "M15": 0.6 / 12 / 4,
-            "M30": 0.6 / 24 / 2,
-            "H1": 0.6 / 24,
-            "H4": 0.6 / 6,
-            "D1": 0.6,
+            "M1": 0.5 / 24 / 60,  # Menyesuaikan width agar candle lebih rapat
+            "M5": 0.5 / 24 / 12,
+            "M15": 0.5 / 24 / 4,
+            "M30": 0.5 / 24 / 2,
+            "H1": 0.5 / 24,
+            "H4": 0.5 / 6,
+            "D1": 0.5,
         }
 
-        width = candle_width.get(timeframe.upper(), 0.6 / 24)
+        width = candle_width.get(timeframe.upper(), 0.5 / 24)
 
+        # Menggambar candle
         candlestick_ohlc(
             ax, ohlc, width=width, colorup="#26a69a", colordown="#ef5350", alpha=0.9
         )
 
-        # Gambar exponential moving average
+        # Gambar moving average jika tersedia
         if "ema_21" in display_df.columns and "ema_50" in display_df.columns:
             ax.plot(
                 display_df.index,
@@ -87,7 +94,7 @@ class ChartVisualizer:
             "M1": "%H:%M",
             "M5": "%H:%M",
             "M15": "%H:%M",
-            "M30": "%m-%d %H:%M",
+            "M30": "%H:%M",
             "H1": "%m-%d %H:%M",
             "H4": "%m-%d",
             "D1": "%Y-%m-%d",
@@ -96,16 +103,16 @@ class ChartVisualizer:
         # Default format jika timeframe tidak dikenal
         date_format = date_formats.get(timeframe.upper(), "%m-%d %H:%M")
 
-        # Interval label waktu yang disesuaikan dengan timeframe
-        if timeframe.lower() in ["M1", "M5"]:
-            ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=15))
-        elif timeframe.lower() in ["M15", "M30"]:
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
-        elif timeframe.lower() == "H1":
+        # Mengurangi jumlah label waktu untuk menghindari tumpang tindih
+        if timeframe.upper() in ["M1", "M5"]:
+            ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=30))
+        elif timeframe.upper() in ["M15", "M30"]:
+            ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
+        elif timeframe.upper() == "H1":
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
-        elif timeframe.lower() == "H4":
+        elif timeframe.upper() == "H4":
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=3))
-        elif timeframe.lower() == "D1":
+        elif timeframe.upper() == "D1":
             ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
         else:
             ax.xaxis.set_major_locator(mdates.HourLocator(interval=24))
@@ -117,22 +124,31 @@ class ChartVisualizer:
         ax.yaxis.set_minor_locator(plt.MultipleLocator(0.0005))
         ax.grid(which="minor", color="#1c202b", linestyle="-", linewidth=0.2, alpha=0.3)
 
-        # Memperbaiki tampilan y-axis dengan format 4 digit
+        # Format y-axis dengan 4 digit desimal
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.4f}"))
 
-        # Memperbaiki rotasi label dan spacing
-        plt.xticks(rotation=45)
+        # Mengurangi rotasi label agar lebih rapi
+        plt.xticks(rotation=30)
 
-        # Tambahkan padding
+        # Mengatur padding untuk memastikan semua elemen terlihat
         plt.subplots_adjust(left=0.08, right=0.92, top=0.92, bottom=0.15)
 
-        # Dynamically set y-axis limits with a bit of padding
-        y_range = display_df["high"].max() - display_df["low"].min()
-        y_padding = y_range * 0.05  # 5% padding
+        # Perhitungan y-axis limits yang lebih baik
+        # Dinamis berdasarkan range aktual data, bukan hanya high dan low
+        # Ini akan membantu mengatasi pergerakan tajam
 
-        ax.set_ylim(
-            display_df["low"].min() - y_padding, display_df["high"].max() + y_padding
-        )
+        # Menghitung percentile untuk mengatasi outlier
+        low_values = np.percentile(display_df["low"].values, 1)  # Mengambil 1% terbawah
+        high_values = np.percentile(
+            display_df["high"].values, 99
+        )  # Mengambil 99% teratas
+
+        # Menghitung range yang realistis
+        y_range = high_values - low_values
+        y_padding = y_range * 0.1  # 10% padding
+
+        # Set batas y-axis
+        ax.set_ylim(low_values - y_padding, high_values + y_padding)
 
         # Hapus spines yang tidak perlu
         ax.spines["top"].set_visible(False)
@@ -141,7 +157,7 @@ class ChartVisualizer:
         ax.spines["bottom"].set_color("#2a2e39")
 
         # Tambahkan watermark dengan opacity rendah
-        fig.text(
+        ax.text(
             0.99,
             0.01,
             f"{symbol.upper()} {timeframe.upper()}",
@@ -152,6 +168,11 @@ class ChartVisualizer:
             va="bottom",
             transform=ax.transAxes,
         )
+
+        # Memastikan tidak ada gap pada sumbu x
+        start_date = display_df.index.min()
+        end_date = display_df.index.max()
+        ax.set_xlim(start_date, end_date)
 
         # Save the chart
         plot_path = PLOTS_DIR / f"{symbol}_{timeframe}_chart.png"
