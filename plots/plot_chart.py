@@ -38,6 +38,15 @@ class ChartVisualizer:
             "H4": "%m-%d",
             "D1": "%Y-%m-%d",
         }
+        self.major_locators = {
+            "M1": mdates.MinuteLocator(interval=30),
+            "M5": mdates.MinuteLocator(interval=30),
+            "M15": mdates.HourLocator(interval=2),
+            "M30": mdates.HourLocator(interval=2),
+            "H1": mdates.DayLocator(interval=1),
+            "H4": mdates.DayLocator(interval=3),
+            "D1": mdates.WeekdayLocator(interval=14),
+        }
 
     def _setup_axes(self, ax, symbol, timeframe):
         ax.set_title(
@@ -49,7 +58,6 @@ class ChartVisualizer:
         ax.set_facecolor("#131722")
         ax.grid(color="#2a2e39", linestyle="-", linewidth=0.5, alpha=0.5)
 
-        # Remove unnecessary spines
         for spine in ["top", "right"]:
             ax.spines[spine].set_visible(False)
         for spine in ["left", "bottom"]:
@@ -59,21 +67,12 @@ class ChartVisualizer:
         timeframe = timeframe.upper()
         date_format = self.date_formats.get(timeframe, "%m-%d %H:%M")
 
-        # Configure major locators
-        if timeframe in ["M1", "M5"]:
-            ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=30))
-        elif timeframe in ["M15", "M30"]:
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
-        elif timeframe == "H1":
-            ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
-        elif timeframe == "H4":
-            ax.xaxis.set_major_locator(mdates.DayLocator(interval=3))
-        elif timeframe == "D1":
-            ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=14))
-        else:
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=24))
-
+        # Set major locator and formatter
+        locator = self.major_locators.get(timeframe, mdates.HourLocator(interval=24))
+        ax.xaxis.set_major_locator(locator)
         ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format))
+
+        # IMPORTANT: Completely disable minor ticks on x-axis
         ax.xaxis.set_minor_locator(plt.NullLocator())
 
     def _configure_price_axis(self, ax, display_df):
@@ -87,19 +86,6 @@ class ChartVisualizer:
         padding = (high - low) * 0.08
         ax.set_ylim(low - padding, high + padding)
         ax.set_xlim(display_df.index.min(), display_df.index.max())
-
-    def _add_watermark(self, ax, symbol, timeframe):
-        ax.text(
-            0.99,
-            0.01,
-            f"{symbol.upper()} {timeframe.upper()}",
-            fontsize=10,
-            color="white",
-            alpha=0.2,
-            ha="right",
-            va="bottom",
-            transform=ax.transAxes,
-        )
 
     def generate_chart(self, df: pd.DataFrame, symbol: str, timeframe: str):
         plt.style.use("dark_background")
@@ -142,7 +128,19 @@ class ChartVisualizer:
         self._configure_time_axis(ax, timeframe)
         self._configure_price_axis(ax, display_df)
         self._set_axis_limits(ax, display_df)
-        self._add_watermark(ax, symbol, timeframe)
+
+        # Add watermark
+        ax.text(
+            0.99,
+            0.01,
+            f"{symbol.upper()} {timeframe.upper()}",
+            fontsize=10,
+            color="white",
+            alpha=0.2,
+            ha="right",
+            va="bottom",
+            transform=ax.transAxes,
+        )
 
         # Final adjustments
         plt.xticks(rotation=0)
