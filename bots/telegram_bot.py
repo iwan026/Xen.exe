@@ -47,7 +47,7 @@ class TelegramBot:
             processing_msg = await update.message.reply_text("⏳ Menganalisa...")
             result = self.analisis_symbol.get_analisis()
 
-            analisis_msg = f"🔄 **Hasil Analisa XenBot** 🔄\n{result['signal']}"
+            analisis_msg = f"🔄 **Hasil Analisa XenBot** 🔄\n{result['analisis']}"
             processing_msg.edit_text(analisis_msg, parse_mode="Markdown")
         except Exception as e:
             logger.error(f"Gagal menganalisa simbol: {e}")

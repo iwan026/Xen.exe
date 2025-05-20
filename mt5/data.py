@@ -1,3 +1,4 @@
+import pandas as pd
 import MetaTrader5 as mt5
 from config import TIMEFRAMES, MT5_LOGIN, MT5_PASSWORD, MT5_SERVER
 from logs.logger import setup_logging
@@ -5,7 +6,7 @@ from logs.logger import setup_logging
 logger = setup_logging()
 
 
-def get_realtime_data(symbol: str, timeframe: str, num_candles: int = 150):
+def get_realtime_data(symbol: str, timeframe: str, num_candles: int = 150) pd.DataFrame:
     try:
         if not mt5.initialize(
             login=MT5_LOGIN, password=MT5_PASSWORD, server=MT5_SERVER
