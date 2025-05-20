@@ -85,7 +85,7 @@ class ChartVisualizer:
         ax.set_facecolor("#131722")
         ax.grid(color="#2a2e39", linestyle="-", linewidth=0.5, alpha=0.5)
 
-        # Sesuaikan format date dan interval berdasarkan timeframe
+        # Perbaikan format date dan interval berdasarkan timeframe
         date_formats = {
             "M1": "%H:%M",
             "M5": "%H:%M",
@@ -93,29 +93,34 @@ class ChartVisualizer:
             "M30": "%H:%M",
             "H1": "%m-%d %H:%M",
             "H4": "%m-%d",
-            "D1": "%Y-%m-%Y",
+            "D1": "%Y-%m-%d",  # Perbaikan format untuk D1
         }
 
         # Default format jika timeframe tidak dikenal
         date_format = date_formats.get(timeframe.upper(), "%m-%d %H:%M")
 
-        # Mengurangi jumlah label waktu untuk menghindari tumpang tindih
+        # Perbaikan interval label waktu untuk menghindari tumpang tindih
         if timeframe.upper() in ["M1", "M5"]:
             ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=30))
-        elif timeframe.upper() in ["M15", "M30"]:
+        elif timeframe.upper() == "M15":
+            ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
+        elif timeframe.upper() == "M30":
             ax.xaxis.set_major_locator(mdates.HourLocator(interval=2))
         elif timeframe.upper() == "H1":
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
         elif timeframe.upper() == "H4":
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=3))
         elif timeframe.upper() == "D1":
-            ax.xaxis.set_major_locator(
-                mdates.WeekdayLocator(interval=14)
-            )  # Interval 2 minggu seperti contoh
+            ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=2))
         else:
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=24))
+            ax.xaxis.set_major_locator(mdates.HourLocator(interval=12))
 
-        ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format))
+        # Pastikan format tanggal diterapkan dengan benar
+        date_formatter = mdates.DateFormatter(date_format)
+        ax.xaxis.set_major_formatter(date_formatter)
+
+        # Rotasi label agar lebih mudah dibaca
+        plt.xticks(rotation=45)
 
         # Minor ticks untuk grid yang lebih halus
         ax.xaxis.set_minor_locator(mdates.AutoDateLocator())
@@ -125,11 +130,10 @@ class ChartVisualizer:
         # Format y-axis dengan 4 digit desimal
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.4f}"))
 
-        # Mengurangi rotasi label agar lebih rapi
-        plt.xticks(rotation=0)
-
-        # Mengatur padding untuk memastikan semua elemen terlihat
-        plt.subplots_adjust(left=0.08, right=0.92, top=0.92, bottom=0.15)
+        # Mengatur padding untuk memastikan semua elemen terlihat dan label tidak terpotong
+        plt.subplots_adjust(
+            left=0.08, right=0.92, top=0.92, bottom=0.18
+        )  # Tambahkan padding bottom
 
         # Menghitung percentile untuk mengatasi outlier
         low_values = np.percentile(display_df["low"].values, 2)  # Mengambil 2% terbawah
@@ -167,6 +171,9 @@ class ChartVisualizer:
         start_date = display_df.index.min()
         end_date = display_df.index.max()
         ax.set_xlim(start_date, end_date)
+
+        # Force a tight_layout sebelum save untuk memastikan semua label terlihat
+        plt.tight_layout()
 
         # Save the chart
         plot_path = PLOTS_DIR / f"{symbol}_{timeframe}_chart.png"
