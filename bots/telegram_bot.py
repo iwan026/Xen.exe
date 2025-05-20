@@ -46,10 +46,19 @@ class TelegramBot:
                 return None
 
             processing_msg = await update.message.reply_text("⏳ Menganalisa...")
-            result = self.analisis_symbol.get_analisis(symbol, timeframe)
+            try:
+                result = self.analisis_symbol.get_analisis(symbol, timeframe)
 
-            analisis_msg = f"🔄 **Hasil Analisa XenBot** 🔄\n{result['analisis']}"
-            await processing_msg.edit_text(analisis_msg, parse_mode="Markdown")
+                analisis_msg = f"🔄 **Hasil Analisa XenBot** 🔄\n{result['analisis']}"
+                with open[result["chart_path"], "rb"] as chart_file:
+                    await update.message.reply_photo(
+                        photo=chart_file, caption=analisis_msg, parse_mode="Markdown"
+                    )
+                await processing_msg.delete()
+            except Exception as e:
+                await processing_msg.edit_text(f"❌ Analisa error: {e}")
+                logger.error(f"❌ Analisa error: {e}")
+
         except Exception as e:
             logger.error(f"Gagal menganalisa simbol: {e}")
             await update.message.reply_text(f"❌ Analisa gagal: {e}")

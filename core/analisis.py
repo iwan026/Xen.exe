@@ -1,12 +1,16 @@
 import talib
 import pandas as pd
 from mt5.data import get_realtime_data
+from plots.plot_chart import ChartVisualizer
 from logs.logger import setup_logging
 
 logger = setup_logging()
 
 
 class AnalisisSymbol:
+    def __init__(self):
+        self.chart_visualizer = ChartVisualizer()
+
     def add_exponential_moving_average(self, df: pd.DataFrame):
         df["ema_21"] = talib.EMA(df["close"], timeperiod=21)
         df["ema_50"] = talib.EMA(df["close"], timeperiod=50)
@@ -26,9 +30,9 @@ class AnalisisSymbol:
 
         analisis = ""
         if close > ema_50:
-            analisis += "📈 *Bullish*. Ditandai dengan harga saat ini di atas EMA 200"
+            analisis += "📈 *Bullish*. Ditandai dengan harga saat ini di atas EMA 50"
         elif close < ema_50:
-            analisis += "📉 *Bearish*. Ditandai dengan harga saat ini dibawah EMA 200"
+            analisis += "📉 *Bearish*. Ditandai dengan harga saat ini dibawah EMA 50"
         else:
             analisis += ""
 
@@ -47,4 +51,9 @@ class AnalisisSymbol:
         else:
             analisis += ""
 
-        return {"analisis": analisis}
+        result = {
+            "analisis": analisis,
+            "chart_path": self.chart_visualizer.generate_chart(df, symbol, timeframe),
+        }
+
+        return result
