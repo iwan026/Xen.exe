@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Konfigurasi Path Direktori
 BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
-PLOTS_DIR = BASE_DIR / "plots" / "visual"
+PLOTS_DIR = BASE_DIR / "plots"
 LOGS_DIR = BASE_DIR / "logs"
 
 # Konfigurasi Telegram
