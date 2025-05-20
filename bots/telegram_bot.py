@@ -30,7 +30,7 @@ class TelegramBot:
 
     async def analisa_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            args = context.args()
+            args = context.args
             if len(args) != 1:
                 await update.message.reply_text(
                     "Gunakan: /analisa [PAIR]\nContoh: /analisa EURUSD"
@@ -38,6 +38,7 @@ class TelegramBot:
                 return None
 
             symbol = args[0].upper()
+            timeframe = args[1].upper()
             if symbol not in SYMBOLS:
                 await update.message.reply_text(
                     f"Yaah maaf, saya belum dilatih untuk menganalisa {symbol}"
@@ -45,13 +46,13 @@ class TelegramBot:
                 return None
 
             processing_msg = await update.message.reply_text("⏳ Menganalisa...")
-            result = self.analisis_symbol.get_analisis()
+            result = self.analisis_symbol.get_analisis(symbol, timeframe)
 
             analisis_msg = f"🔄 **Hasil Analisa XenBot** 🔄\n{result['analisis']}"
             processing_msg.edit_text(analisis_msg, parse_mode="Markdown")
         except Exception as e:
             logger.error(f"Gagal menganalisa simbol: {e}")
-            processing_msg.edit_text(f"❌ Analisa gagal: {e}")
+            await update.message.reply_text(f"❌ Analisa gagal: {e}")
 
     def run(self):
         self.app.run_polling()
