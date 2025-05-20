@@ -1,5 +1,5 @@
 import pandas as pd
-from matplotlob.pyplot import plt
+from matplotlib.pyplot import plt
 from matplotlib.dates import mdates
 from mplfinance.original_flavor import candlestick_ohlc
 from config import PLOTS_DIR
