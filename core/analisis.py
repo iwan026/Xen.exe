@@ -19,23 +19,28 @@ class AnalisisSymbol:
         self.add_exponential_moving_average(df)
         self.add_rsi(df)
 
+        close = df["close"].iloc[-1]
+        ema_21 = df["ema_21"].iloc[-1]
+        ema_50 = df["ema_50"].iloc[-1]
+        rsi_14 = df["rsi_14"].iloc[-1]
+
         analisis = ""
-        if df["close"] > df["ema_50"]:
+        if close > ema_50:
             analisis += "📈 *Bullish*. Ditandai dengan harga saat ini di atas EMA 200"
-        elif df["close"] < df["ema_50"]:
+        elif close < ema_50:
             analisis += "📉 *Bearish*. Ditandai dengan harga saat ini dibawah EMA 200"
         else:
             analisis += ""
 
-        if df["rsi_14"] > 60 and df["rsi_14"] < 80:
+        if rsi_14 > 60 and rsi_14 < 80:
             analisis += "RSI 14 sudah memasuki area *Overbought* menandakan bahwa ada kemungkinan terjadinya reversal"
-        elif df["rsi_14"] > 20 and df["rsi_14"] < 40:
+        elif rsi_14 > 20 and rsi_14 < 40:
             analisis += "RSI 14 sudah memasuki area *Oversold*, ada kemungkinan akab terjadinya reversal"
-        elif df["rsi_14"] < 20:
+        elif rsi_14 < 20:
             analisis += (
                 "RSI 14 sudah terlalu rendah, kemungkinan reversal sangat tinggi."
             )
-        elif df["rsi_14"] > 80:
+        elif rsi_14 > 80:
             analisis += (
                 "RSI 14 sudah terlalu tinggi, kemungkinan reversal sangat tinggi."
             )
