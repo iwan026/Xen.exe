@@ -118,7 +118,7 @@ class ChartVisualizer:
         ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format))
 
         # Minor ticks untuk grid yang lebih halus
-        ax.xaxis.set_minor_locator(mdates.AutoDateLocator())
+        ax.xaxis.set_minor_locator(plt.NullLocator())
         ax.yaxis.set_minor_locator(plt.MultipleLocator(0.0005))
         ax.grid(which="minor", color="#1c202b", linestyle="-", linewidth=0.2, alpha=0.3)
 
