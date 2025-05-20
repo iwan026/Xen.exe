@@ -100,7 +100,7 @@ class ChartVisualizer:
         if timeframe.lower() in ["M1", "M5"]:
             ax.xaxis.set_major_locator(mdates.HourLocator(interval=4))
         elif timeframe.lower() in ["M15", "M30"]:
-            ax.xaxis.set_major_locator(mdates.HourLocator(interval=12))
+            ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
         elif timeframe.lower() == "H1":
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
         elif timeframe.lower() == "H4":
