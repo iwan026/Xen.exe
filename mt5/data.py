@@ -6,7 +6,9 @@ from logs.logger import setup_logging
 logger = setup_logging()
 
 
-def get_realtime_data(symbol: str, timeframe: str, num_candles: int = 150) pd.DataFrame:
+def get_realtime_data(
+    symbol: str, timeframe: str, num_candles: int = 150
+) -> pd.DataFrame:
     try:
         if not mt5.initialize(
             login=MT5_LOGIN, password=MT5_PASSWORD, server=MT5_SERVER
