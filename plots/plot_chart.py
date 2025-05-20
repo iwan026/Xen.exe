@@ -28,9 +28,22 @@ class ChartVisualizer:
         candle_count = candle_counts.get(timeframe.upper(), 100)
         display_df = df.tail(candle_count).copy()
 
+        # Pastikan tidak ada data yang hilang
         display_df = display_df.fillna(method="ffill")
 
-        display_df["date_num"] = mdates.date2num(display_df.index.to_pydatetime())
+        # Perbaikan utama: format date_num dengan metode yang lebih konsisten
+        # dan pastikan data frame index adalah datetime
+        if not isinstance(display_df.index, pd.DatetimeIndex):
+            try:
+                display_df.index = pd.to_datetime(display_df.index)
+            except Exception as e:
+                logger.error(f"Error converting index to datetime: {e}")
+                # Fallback jika konversi gagal
+                display_df["date_num"] = range(len(display_df))
+        else:
+            # Konversi datetime ke format numerik yang dapat digunakan oleh candlestick_ohlc
+            display_df["date_num"] = mdates.date2num(display_df.index.to_pydatetime())
+
         ohlc = display_df[["date_num", "open", "high", "low", "close"]].values
 
         # Lebar candle berdasarkan timeframe
@@ -84,7 +97,20 @@ class ChartVisualizer:
         ax.set_facecolor("#131722")
         ax.grid(color="#2a2e39", linestyle="-", linewidth=0.5, alpha=0.5)
 
-        ax.xaxis.set_major_formatter(mdates.AutoDateFormatter(mdates.AutoDateLocator()))
+        # Perbaikan formatter tanggal berdasarkan timeframe
+        if timeframe.upper() in ["M1", "M5", "M15", "M30"]:
+            date_format = mdates.DateFormatter("%H:%M\n%d-%m")
+            ax.xaxis.set_major_formatter(date_format)
+            # Untuk timeframe pendek, tampilkan tick lebih sering
+            ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=5, maxticks=10))
+        elif timeframe.upper() in ["H1", "H4"]:
+            date_format = mdates.DateFormatter("%d-%m\n%H:%M")
+            ax.xaxis.set_major_formatter(date_format)
+            ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=5, maxticks=8))
+        else:  # D1 dan lainnya
+            date_format = mdates.DateFormatter("%d-%m-%Y")
+            ax.xaxis.set_major_formatter(date_format)
+            ax.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=7))
 
         # Mengurangi rotasi label agar lebih rapi
         plt.xticks(rotation=30)
@@ -124,10 +150,19 @@ class ChartVisualizer:
             transform=ax.transAxes,
         )
 
-        # Memastikan tidak ada gap pada sumbu x
-        start_date = display_df.index.min()
-        end_date = display_df.index.max()
-        ax.set_xlim(start_date, end_date)
+        # Set limit x-axis untuk memastikan semua candle terlihat
+        if len(display_df) > 0:
+            # Pastikan ada data dalam display_df
+            try:
+                # Mendapatkan tanggal pertama dan terakhir
+                start_date = display_df.index.min()
+                end_date = display_df.index.max()
+
+                # Tambahkan sedikit padding untuk tanggal
+                delta = (end_date - start_date) * 0.02  # 2% padding
+                ax.set_xlim(start_date - delta, end_date + delta)
+            except Exception as e:
+                logger.error(f"Error setting x limits: {e}")
 
         # Save the chart
         plot_path = PLOTS_DIR / f"{symbol}_{timeframe}_chart.png"
