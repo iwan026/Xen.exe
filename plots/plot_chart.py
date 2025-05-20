@@ -12,13 +12,12 @@ logger = setup_logging()
 
 class ChartVisualizer:
     def generate_chart(self, df: pd.DataFrame, symbol: str, timeframe: str):
-        # Styling
         plt.style.use("dark_background")
-        fig, ax = plt.subplots(figsize=(14, 7), facecolor="#131722")
+        fig, ax = plt.subplots(figsize=(16, 9), facecolor="#131722")
 
-        # Menentukan jumlah candle yang ditampilkan berdasarkan timeframe
+        # Jumlah candle yang ditampilkan berdasarkan timeframe
         candle_counts = {
-            "M1": 100,  # Mengurangi jumlah candle untuk menghindari area kosong
+            "M1": 100,
             "M5": 100,
             "M15": 100,
             "M30": 100,
@@ -28,32 +27,29 @@ class ChartVisualizer:
         }
 
         candle_count = candle_counts.get(timeframe.upper(), 100)
-
-        # Mengambil data candle terbaru sesuai jumlah candle yang akan ditampilkan
         display_df = df.tail(candle_count).copy()
 
-        # Memastikan tidak ada data yang hilang (gap) yang menyebabkan area kosong
         display_df = display_df.fillna(method="ffill")
 
         display_df["date_num"] = mdates.date2num(display_df.index.to_pydatetime())
         ohlc = display_df[["date_num", "open", "high", "low", "close"]].values
 
-        # Lebar candle yang sesuai berdasarkan timeframe
+        # Lebar candle berdasarkan timeframe
         candle_width = {
-            "M1": 0.5 / 24 / 60,  # Menyesuaikan width agar candle lebih rapat
-            "M5": 0.5 / 24 / 12,
-            "M15": 0.5 / 24 / 4,
-            "M30": 0.5 / 24 / 2,
-            "H1": 0.5 / 24,
-            "H4": 0.5 / 6,
-            "D1": 0.5,
+            "M1": 0.6 / 24 / 60,
+            "M5": 0.6 / 24 / 12,
+            "M15": 0.6 / 24 / 4,
+            "M30": 0.6 / 24 / 2,
+            "H1": 0.6 / 24,
+            "H4": 0.6 / 6,
+            "D1": 0.6,
         }
 
-        width = candle_width.get(timeframe.upper(), 0.5 / 24)
+        width = candle_width.get(timeframe.upper(), 0.6 / 24)
 
         # Menggambar candle
         candlestick_ohlc(
-            ax, ohlc, width=width, colorup="#26a69a", colordown="#ef5350", alpha=0.9
+            ax, ohlc, width=width, colorup="#26a69a", colordown="#ef5350", alpha=1.0
         )
 
         # Gambar moving average jika tersedia
@@ -97,7 +93,7 @@ class ChartVisualizer:
             "M30": "%H:%M",
             "H1": "%m-%d %H:%M",
             "H4": "%m-%d",
-            "D1": "%Y-%m-%d",
+            "D1": "%Y-%m-%Y",
         }
 
         # Default format jika timeframe tidak dikenal
@@ -113,7 +109,9 @@ class ChartVisualizer:
         elif timeframe.upper() == "H4":
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=3))
         elif timeframe.upper() == "D1":
-            ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+            ax.xaxis.set_major_locator(
+                mdates.WeekdayLocator(interval=14)
+            )  # Interval 2 minggu seperti contoh
         else:
             ax.xaxis.set_major_locator(mdates.HourLocator(interval=24))
 
@@ -128,24 +126,20 @@ class ChartVisualizer:
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.4f}"))
 
         # Mengurangi rotasi label agar lebih rapi
-        plt.xticks(rotation=30)
+        plt.xticks(rotation=0)
 
         # Mengatur padding untuk memastikan semua elemen terlihat
         plt.subplots_adjust(left=0.08, right=0.92, top=0.92, bottom=0.15)
 
-        # Perhitungan y-axis limits yang lebih baik
-        # Dinamis berdasarkan range aktual data, bukan hanya high dan low
-        # Ini akan membantu mengatasi pergerakan tajam
-
         # Menghitung percentile untuk mengatasi outlier
-        low_values = np.percentile(display_df["low"].values, 1)  # Mengambil 1% terbawah
+        low_values = np.percentile(display_df["low"].values, 2)  # Mengambil 2% terbawah
         high_values = np.percentile(
-            display_df["high"].values, 99
-        )  # Mengambil 99% teratas
+            display_df["high"].values, 98
+        )  # Mengambil 98% teratas
 
         # Menghitung range yang realistis
         y_range = high_values - low_values
-        y_padding = y_range * 0.1  # 10% padding
+        y_padding = y_range * 0.08  # 8% padding untuk tampilan yang lebih tepat
 
         # Set batas y-axis
         ax.set_ylim(low_values - y_padding, high_values + y_padding)
